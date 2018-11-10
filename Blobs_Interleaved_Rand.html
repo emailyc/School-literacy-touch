@@ -1,0 +1,645 @@
+<!doctype html>
+
+
+
+<html>
+
+<head>
+
+  <title>Blobs</title>
+
+  <script src="https://ajax.googleapis.com/ajax/libs/jquery/1.11.1/jquery.min.js"></script>
+  <script src="jspsych-5.0.3/jspsych.js"></script>
+  <script src="jspsych-5.0.3/plugins/jspsych-call-function.js"></script>
+  <script src="jspsych-5.0.3/plugins/jspsych-survey-text.js"></script>
+  <script src="jspsych-5.0.3/plugins/jspsych-survey-multi-choice.js"></script>
+  <script src="jspsych-5.0.3/plugins/jspsych-survey-likert.js"></script>
+  <script src="jspsych-5.0.3/plugins/jspsych-text.js"></script>
+  <script src="jspsych-5.0.3/plugins/jspsych-single-stim.js"></script>
+  <script src="jspsych-5.0.3/plugins/jspsych-button-response.js"></script>
+  <script src="jspsych-5.0.3/plugins/jspsych-multi-stim-multi-response.js"></script>
+  <script src="jspsych-5.0.3/plugins/jspsych-html.js"></script>
+  <link href="jspsych-5.0.3/css/jspsych.css" rel="stylesheet" type="text/css"></link>
+
+
+</head>
+
+<body>
+
+</body>
+
+<script>
+  //Choosing HIGH (even) or LOW (odd) similarity
+  var sub_num = Math.floor(Math.random() * 1000000);
+  if (sub_num % 2 == 0) {
+    folder = "Blobs/HighSimilarity/"
+    condition = "HighSimilarity"
+  } else {
+    folder = "Blobs/LowSimilarity/"
+    condition = "LowSimilarity"
+  }
+
+  var all_images = [] //added
+
+  for (i = 1; i <= 16; i++) {
+    if (i < 10) {
+      obj1 = folder + "a" + 0 + i + ".gif";
+      obj2 = folder + "b" + 0 + i + ".gif";;
+      obj3 = folder + "c" + 0 + i + ".gif";;
+      obj4 = folder + "d" + 0 + i + ".gif";;
+    } else {
+      obj1 = folder + "a" + i + ".gif";
+      obj2 = folder + "b" + i + ".gif";;
+      obj3 = folder + "c" + i + ".gif";;
+      obj4 = folder + "d" + i + ".gif";;
+    }
+    all_images.push(obj1, obj2, obj3, obj4);
+  }
+
+  //Choosing order of A,B,C,D
+  var letterarray = ["a", "b", "c", "d"]
+  letterarray = jsPsych.randomization.shuffle(letterarray)
+  pletter = letterarray[0]
+  qletter = letterarray[1]
+  rletter = letterarray[2]
+  uletter = letterarray[3]
+
+  // subject id
+  var id = sub_num + "_" + condition + "_" + "interleaved"
+
+  // banned list
+  var banned = ["noneyet"];
+
+  var is_banned = 0;
+
+  var mTurk_ID_block = {
+    type: 'survey-text',
+    questions: [
+      ["Please Enter Mturk ID."]
+    ],
+    timing_post_trial: 0
+  };
+
+  /*Assign mTurk ID to File Name*/
+  var get_mTurk_ID = {
+    type: 'call-function',
+    func: function() {
+      var data = jsPsych.data.getLastTrialData();
+      mturk_id = JSON.parse(data.responses).Q0;
+      mturk_id = mturk_id.replace(/\s+/g, ''); //Removing whitespace
+      if (banned.indexOf(mturk_id.toUpperCase()) > -1) {
+        is_banned = 1;
+        alert("ERROR: Ineligible to participate. Possible reasons: 1) Participated before, 2) Poor performance in prior study. Please return the HIT, thank you.");
+      }
+      id = mturk_id + "_" + id;
+    }
+  };
+
+  /*Consent Functions and Block*/
+  var check_consent = function() {
+    if ($('#consent_checkbox').is(':checked')) {
+      if (banned.indexOf(mturk_id.toUpperCase()) > -1) {
+        alert("ERROR: Ineligible to participate. Possible reasons: 1) Participated before, 2) Poor performance in prior study. Please return the HIT, thank you.");
+        return false;
+      }
+      return true;
+    } else {
+      alert("If you wish to participate in this study, please check the box labeled 'Check this box to indicate your consent.'");
+      return false;
+    }
+    return false;
+  };
+
+  var consent_block = {
+    type: 'html',
+    url: "real_consent.html",
+    cont_btn: "start",
+    check_fn: check_consent
+  };
+
+  /*Periodic Save Stuff*/
+  //Save data function
+  function saveData(filename, filedata) {
+    $.ajax({
+      type: 'post',
+      cache: false,
+      url: 'save_data.php',
+      data: {
+        filename: filename,
+        filedata: filedata
+      }
+    });
+  }
+
+  //Periodically save
+  var periodic_save = {
+    type: 'call-function',
+    func: function(data) {
+      saveData(id + ".csv", jsPsych.data.dataAsCSV());
+    }
+  };
+
+  //Where everything gets pushed
+
+  var timeline = [];
+
+
+
+  var welcome_block = {
+    type: "text",
+    text: "Welcome to the experiment. <br>Before you begin, please make sure that you are on a computer or laptop, and not on a phone or tablet, and that your current browser is either Google Chrome or Mozilla Firefox.<br><br> Press enter once you are ready.",
+    cont_key: [13]
+  };
+
+  var preamble_block = {
+    type: "text",
+    text: "Welcome to the experiment. <br>" +
+      "Please make sure that you are on a computer or laptop, and not on a phone or tablet.  Your current browser should be either Google Chrome or Mozilla Firefox. <br>" +
+      "Please make sure that you do NOT take any screenshots or notes at any point during the experiment. <br><br>" +
+      "Once you are ready, press enter to begin.",
+    cont_key: [13]
+  };
+
+  var instruction_block = {
+
+    type: "text",
+
+    text: "NASA has discovered several cells of alien organisms. Each cell can be categorized into one of 4 species solely on the basis of its perceptual features. " +
+      "Your task is to learn how to tell the 4 species apart. To help you learn, you will get to see examples of cells from each of the 4 species. " +
+      "Specifically, you will be presented with 8 examples from each species, and each example will be shown more than once (6 times). " +
+      "During the learning phase, you will be presented with 1 example at a time. You don't have to respond to the examples. " +
+      "All you need to do is to focus on the examples and try to learn the distinctions between these species. <br><br>" +
+      "The four species have been named: R, Q, U, P<br>" +
+      "If you understand the task, Press the ENTER key to begin learning.",
+
+    cont_key: [13]
+
+  };
+
+
+  var instruction_block2 = {
+    type: "text",
+    text: "To recap, during the learning phase, you will get to view each species 48 times in total (8 examples, 6 times each). " +
+      "In order to familiarize you with the procedure, there will be a practice phase first. During practice, different animals (that you are already familiar with, e.g., dogs, cats) will be presented. <br>" +
+      "If you are ready, press ENTER to start the practice. ",
+    cont_key: [13]
+  };
+
+  var practice_instructions = {
+    type: "text",
+    text: "Press ENTER to begin the practice.",
+    cont_key: [13]
+  };
+
+  var end_practice = {
+    type: "text",
+    text: "You have just completed the practice phase. <br>" +
+      "Next, you will be presented with the new cells from 4 different alien species. After each presentation, you will have to select 'Next' to continue.<br>" +
+      "Press ENTER to begin.",
+    cont_key: [13]
+  };
+
+
+  var end_learning = {
+    type: "text",
+    text: "You have now completed the learning phase.<br>Press 'Enter' key to continue.",
+    cont_key: [13]
+  };
+
+  var learning_check = {
+    type: 'survey-multi-choice',
+    preamble: ['Please answer the following question before continuing with the learning task.'],
+    questions: ["What have you been asked to do in this task?"],
+    options: [
+      ['1. Memorize specific examples of the categories', '2. Learn the distinction between the different categories', '3. Learn how to draw the different categories']
+    ]
+  };
+
+  var survey_trial = {
+    type: 'survey-text',
+    questions: ["How old are you?", "Where were you born?"],
+  };
+
+  var test_instructions = {
+    type: "text",
+    text: "Now, we would like to test your knowledge about the cells you just learned.<br><br>" +
+      "You will be presented with one cell at a time and your job is to identify which species it belongs to. " +
+      "Some of the cells were presented to you before in the study phase while the others are completely new. " +
+      "You can click on the species name to indicate your choice. " +
+      "There is no time limit for your response, so please consider your answer carefully before clicking the choice. " +
+      "Once you are ready, press ENTER to begin the test.",
+    cont_key: [13]
+  }
+
+  var test_end = {
+    type: "text",
+    text: "You have now completed the test phase. Press 'Enter' key to continue.",
+    cont_key: [13]
+  };
+
+  var fixation = {
+    type: 'single-stim',
+    stimulus: "<p class='center-content'><br><br><br><br><br>+</p>",
+    is_html: true,
+    timing_response: 500, // how long to show the fixation for
+    choices: 'none', // don't allow any responses from the subject
+    timing_post_trial: 0
+  }
+
+  var block_break = {
+    type: "text",
+    text: "Take a one minute break to rest your eyes. Press 'Enter' key to continue.",
+    cont_key: [13]
+  };
+
+  var next_button = {
+    type: 'button-response',
+    stimulus: "",
+    choices: ['Next'],
+    prompt: "<p class='center-content'>Click Next to continue on to the next image.</p>"
+  };
+
+  var arr1 = []
+  var arr2 = []
+  var arr3 = []
+  var arr4 = []
+
+  for (i = 1; i <= 16; i++) {
+    if (i < 10) {
+      obj1 = pletter + 0 + i + ".gif";
+      obj2 = qletter + 0 + i + ".gif";;
+      obj3 = rletter + 0 + i + ".gif";;
+      obj4 = uletter + 0 + i + ".gif";;
+    } else {
+      obj1 = pletter + i + ".gif";;
+      obj2 = qletter + i + ".gif";;
+      obj3 = rletter + i + ".gif";;
+      obj4 = uletter + i + ".gif";;
+    }
+    arr1.push(obj1);
+    arr2.push(obj2);
+    arr3.push(obj3);
+    arr4.push(obj4);
+  }
+
+  imagearray1 = jsPsych.randomization.shuffle(arr1)
+  imagearray2 = jsPsych.randomization.shuffle(arr2)
+  imagearray3 = jsPsych.randomization.shuffle(arr3)
+  imagearray4 = jsPsych.randomization.shuffle(arr4)
+
+  //The slice() method selects the elements starting at the given start argument, and ends at,
+  //but does not include, the given end argument.
+
+  // learning: first 8 in array
+  learningarray1 = imagearray1.slice(0, 8)
+  learningarray2 = imagearray2.slice(0, 8)
+  learningarray3 = imagearray3.slice(0, 8)
+  learningarray4 = imagearray4.slice(0, 8)
+
+  // complete learned array with no repeats // added //
+  learnedarray = learningarray1.concat(learningarray2, learningarray3, learningarray4)
+  learnedarray = jsPsych.randomization.shuffle(learnedarray)
+
+  // multiply each learning array by 6
+  learningarray1 = learningarray1.concat(learningarray1, learningarray1, learningarray1, learningarray1, learningarray1)
+  learningarray2 = learningarray2.concat(learningarray2, learningarray2, learningarray2, learningarray2, learningarray2)
+  learningarray3 = learningarray3.concat(learningarray3, learningarray3, learningarray3, learningarray3, learningarray3)
+  learningarray4 = learningarray4.concat(learningarray4, learningarray4, learningarray4, learningarray4, learningarray4)
+
+  // one big learning array - interleaved
+  //learningarray = shuffle(learningarray1.concat(learningarray2,learningarray3,learningarray4))
+
+  learningarray = []
+  i = 0
+
+  while (i < 48) {
+    learningarray.push(learningarray1[i]);
+    learningarray.push(learningarray2[i]);
+    learningarray.push(learningarray3[i]);
+    learningarray.push(learningarray4[i]);
+    i += 1;
+  }
+
+  // testing: last 8 in array
+  testingarray1 = imagearray1.slice(8, 17)
+  testingarray2 = imagearray2.slice(8, 17)
+  testingarray3 = imagearray3.slice(8, 17)
+  testingarray4 = imagearray4.slice(8, 17)
+
+  // one big testing array
+  testarray = testingarray1.concat(testingarray2, testingarray3, testingarray4)
+  testarray = jsPsych.randomization.shuffle(testarray)
+
+  // even bigger array // added //
+  finalarray = learnedarray.concat(testarray)
+  finalarray = jsPsych.randomization.shuffle(finalarray)
+
+
+
+  var reducepractrials = function() {
+    practrials = practrials - 1;
+    return practrials;
+  };
+
+  var reduceexptrials = function() {
+    exptrials = exptrials - 1;
+    return exptrials;
+  };
+
+  // middle survey //
+  var middle_survey_intro = {
+    type: 'text',
+    text: "Now, we would like you to answer the following demographics questions. Press 'Enter' key to continue.",
+    cont_key: [13]
+  };
+
+  var survey_age = {
+    type: 'survey-text',
+    preamble: ['Please answer the following demographics questions.'],
+    questions: ["How old are you?"],
+  };
+
+  var survey_gender = {
+    type: 'survey-multi-choice',
+    preamble: ['Please answer the following demographics questions.'],
+    questions: ["What is your gender?"],
+    options: [
+      ['Male', 'Female', 'Other', 'Prefer not to say']
+    ]
+  };
+
+  var survey_ethnicity = {
+    type: 'survey-multi-choice',
+    preamble: ['Please answer the following demographics questions.'],
+    questions: ["What is your race/ethnicity?"],
+    options: [
+      ['White', 'Black or African American', 'Hispanic or Latino', 'Asian', 'American Indian', 'Other', 'Prefer not to say']
+    ]
+  };
+
+  var math_1 = {
+    type: 'survey-text',
+    preamble: ['Now, we would like you to answer the following arithmetic questions.'],
+    questions: ["What is 15 + 4?"],
+  };
+
+  var math_2 = {
+    type: 'survey-text',
+    preamble: ['Now, we would like you to answer the following arithmetic questions.'],
+    questions: ["What is 30 - 5?"],
+  };
+
+  var math_3 = {
+    type: 'survey-text',
+    preamble: ['Now, we would like you to answer the following arithmetic questions.'],
+    questions: ["What is 22 + 6?"],
+  };
+
+  var math_4 = {
+    type: 'survey-text',
+    preamble: ['Now, we would like you to answer the following arithmetic questions.'],
+    questions: ["What is 25 - 3?"],
+  };
+
+  var math_5 = {
+    type: 'survey-text',
+    preamble: ['Now, we would like you to answer the following arithmetic questions.'],
+    questions: ["What is 12 + 10?"],
+  };
+
+
+  // study strategy survey //
+  var strategy_intro = {
+    type: 'text',
+    text: "Now, we would like to ask you about the study strategies that you used in the learning phase. Press 'Enter' key to continue.",
+    cont_key: [13]
+  };
+  var block_vs_interleave = {
+    type: 'text',
+    text: "The next page asks you to what extent you might have used two particular study strategies. <br>Press 'Enter' key to continue to the next page.",
+    cont_key: [13]
+  };
+  // defining groups of questions that will go together.
+  var strategy_questions = ["I tried to look for similarities within categories.", "I tried to look for differences between categories."];
+
+  // defining two different response scales that can be used.
+  var scale_1 = ["Strongly Disagree", "Disagree", "Neutral", "Agree", "Strongly Agree"];
+
+  var likert_page = {
+    type: 'survey-likert',
+    questions: strategy_questions,
+    labels: [scale_1, scale_1], // need one scale for every question on a page
+  };
+
+  var other_strategies = {
+    type: 'survey-text',
+    preamble: ['Now we would like to ask you about other strategies you may have used, or to what extent your study strategies may have changed over the course of learning.'],
+    questions: ["Were there any other strategies you used? Please describe them below.",
+      "Did your study strategy change over time? For example, did you focus more on similarities first and then differences, or differences first and then similarities?",
+    ],
+    rows: [5, 5],
+    columns: [55, 55]
+  };
+
+  // end survey //
+  var end_survey_intro = {
+    type: 'text',
+    text: "Now, we would like you to answer the following questions. Your answers for the following questions will not impact your payment in any way. Press 'Enter' key to continue.",
+    cont_key: [13]
+  };
+
+
+  var final_qs = ["1) Did you take any notes while completing the task?",
+    "2) Where you doing anything else while completing this task? (e.g. Netflix)",
+    "3) Have you seen any of these materials before? ",
+    "4) Should we use your data? (No problem if you think you weren't able to give it your best, good for us to know. And we will pay you regardless!)",
+    "5) Any issues with loading or lag?",
+    "6) How many people are in the room with you?",
+    "7) On a scale of 1 to 10, how loud is the space you are working in (10 being highest)?",
+    "8) What type of device did you use today (e.g. laptop,desktop, tablet, phone)?",
+    "9. What is your browser type (e.g. Google Chrome, Safari, Firefox, Internet Explorer, Opera, etc)?",
+    "10. Did you take any screenshots or notes during the task?"
+  ]
+
+  var final_questions = {
+    type: 'survey-text',
+    preamble: ['This is the final page of the experiment. Your answers for the following questions will not impact your payment in any way, so do answer all questions truthfully.'],
+    questions: final_qs,
+    rows: [3, 3, 3, 3, 3, 3, 3, 3, 3, 3],
+    columns: [55, 55, 55, 55, 55, 55, 55, 55, 55, 55]
+  };
+
+
+  timeline.push(welcome_block);
+  timeline.push(mTurk_ID_block);
+  timeline.push(get_mTurk_ID);
+  timeline.push(consent_block);
+  timeline.push(preamble_block);
+  timeline.push(instruction_block);
+  timeline.push(instruction_block2);
+  timeline.push(practice_instructions);
+
+  //practice here
+  dogarray = ["dog1.jpg", "dog2.jpg"]
+  catarray = ["cat1.jpg", "cat2.jpg"]
+  birdarray = ["bird1.jpg", "bird2.jpg"]
+  rabbitarray = ["rabbit1.jpg", "rabbit2.png"]
+
+  practicearray = dogarray.concat(catarray, birdarray, rabbitarray)
+  practicearray = jsPsych.randomization.shuffle(practicearray)
+
+  practrials = 7 // actually 8 but js counts from 0
+  practiceimagefolder = "practiceimages/"
+
+
+  for (prac = 0; prac < 8; prac++) {
+
+    timeline.push(fixation);
+
+    var practice_category = {
+      type: 'single-stim',
+      stimulus: function() {
+        // select image, then display label based on image name.
+        display = practiceimagefolder + practicearray[practrials];
+        return display
+      },
+      timing_response: 2000,
+      prompt: function() {
+        imagename = practicearray[practrials];
+        firstletter = imagename.charAt(0)
+        reducepractrials()
+        if (firstletter == "d") {
+          caption = "Category " + "Dog";
+        } else if (firstletter == "c") {
+          caption = "Category " + "Cat";
+        } else if (firstletter == "b") {
+          caption = "Category " + "Bird";
+        } else if (firstletter == "r") {
+          caption = "Category " + "Rabbit";
+        }
+        return "<p class='center-content'>" + caption + "</p>"
+      },
+      response_ends_trial: false,
+    };
+    timeline.push(practice_category);
+    timeline.push(next_button);
+
+  }
+
+  // practice ends
+
+  timeline.push(end_practice);
+
+  exptrials = 191
+  categorysize = 48;
+  experimentimagefolder = folder
+
+  for (trials = 0; trials < 192; trials++) {
+
+    timeline.push(fixation);
+
+    var category_choice = {
+      type: 'single-stim',
+      stimulus: function() {
+        // select image, then display label based on image name.
+        display = experimentimagefolder + learningarray[exptrials];
+        return display
+      },
+      timing_response: 2000,
+      prompt: function() {
+        imagename = learningarray[exptrials];
+        firstletter = imagename.charAt(0)
+        reduceexptrials()
+        if (firstletter == pletter) {
+          caption = "Category " + "P";
+        } else if (firstletter == qletter) {
+          caption = "Category " + "Q";
+        } else if (firstletter == rletter) {
+          caption = "Category " + "R";
+        } else if (firstletter == uletter) {
+          caption = "Category " + "U";
+        }
+        return "<p class='center-content'>" + caption + "</p>"
+      },
+      response_ends_trial: false,
+    };
+
+    timeline.push(category_choice);
+    timeline.push(next_button);
+
+    if (((trials + 1) % 48) == 0) {
+      timeline.push(periodic_save);
+    }
+    if (trials + 1 == 92) {
+      timeline.push(learning_check); //added//
+    }
+  }
+
+  timeline.push(end_learning);
+  timeline.push(middle_survey_intro);
+  timeline.push(survey_age, survey_gender, survey_ethnicity);
+  timeline.push(math_1, math_2, math_3, math_4, math_5);
+
+  timeline.push(test_instructions);
+
+  for (i = 0; i < 64; i++) { // changed //
+    var test_trial = {
+      type: 'button-response',
+      stimulus: experimentimagefolder + finalarray[i], // changed //
+      choices: ['P', 'Q', 'R', 'U'],
+      prompt: "<p class='center-content'>Select the correct category.</p>",
+      on_finish: function(data) {
+        var answer = 'na';
+        if (data.button_pressed == 0) {
+          answer = pletter;
+        } else if (data.button_pressed == '1') {
+          answer = qletter;
+        } else if (data.button_pressed == '2') {
+          answer = rletter;
+        } else if (data.button_pressed == '3') {
+          answer = uletter;
+        }
+        jsPsych.data.addDataToLastTrial({
+          answer: answer
+        });
+      }
+    };
+    timeline.push(test_trial)
+
+  }
+
+  timeline.push(test_end);
+
+  timeline.push(end_survey_intro);
+  timeline.push(final_questions);
+
+  //END INTRO SCREENS ETC
+
+
+  jsPsych.pluginAPI.preloadImages(all_images, function() {
+    startExperiment();
+  });
+
+  function startExperiment() {
+    //initialize experiment
+
+    jsPsych.init({
+
+      timeline: timeline,
+
+      on_finish: function() {
+
+        //jsPsych.data.displayData();
+
+        saveData(id + ".csv", jsPsych.data.dataAsCSV());
+
+        document.write("<center><h1>Your mTurk Code is <u>" + "XL61629201" + "</u></h1></center>");
+
+      }
+
+    });
+
+  }
+</script>
+
+</html>
