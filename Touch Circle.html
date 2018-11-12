@@ -18,27 +18,25 @@
 
   /* define welcome message trial */
   var welcome = {
-  type: "html-button-response",
-  choices: ['Begin experiment'],
-  stimulus: "Welcome to the experiment.",
-  data: {test_part: 'Welcome'}
-  };
+    type: "html-button-response",
+    choices: ['Begin experiment'],
+    stimulus: "Welcome to the experiment.",
+    data: {test_part: 'Welcome'}
+    };
   timeline.push(welcome);
 
-  var path_to_images = ["img/blue.png", "img/orange.png"]
+  var path_to_circles = ["img/blue.png", "img/orange.png"];
   var circle_stimuli = [{
-      circles: path_to_images,
-      data: {test_part: 'welcome_circle'}
+      circles: path_to_circles,
+      data: {test_part: 'choose_circle'}
     },
     // {
-    //   circle: ,
-    //   data: {test_part: 'welcome_circle', which_circle: "orange.png"}
+    //   circles: path_to_disneyland,
+    //   data: {test_part: 'choose_disney'}
     // }
   ];
 
-
-  /* test my image button plugin */
-  var welcome_blue_circle = {
+  var circles_trial = {
     type: "chung-clickable-image",
     //choices: ["img/blue.png", "img/orange.png"],
     choices: jsPsych.timelineVariable('circles'),
@@ -51,7 +49,7 @@
     type: 'html-keyboard-response',
     stimulus: function(){
       var selected = jsPsych.data.getLastTrialData().select('button_pressed')["values"];
-      var colour = path_to_images[Number(selected)].replace("img/", "").replace(".png", "");
+      var colour = path_to_circles[Number(selected)].replace("img/", "").replace(".png", "");
       return "You chose " + colour + "!!";
 
     },
@@ -62,14 +60,53 @@
     }
   }
 
-  var welcome_procedure = {
-    timeline: [welcome_blue_circle, circle_feedback],
+  var tap_picture = {
+    timeline: [circles_trial, circle_feedback],
     timeline_variables: circle_stimuli,
     repetitions: 3
   }
 
+  timeline.push(tap_picture);
 
-  timeline.push(welcome_procedure);
+
+  var path_to_disneyland = ["img/Darth_Vader.jpg", "img/Mickey.jpg"];
+  var disney_stimuli = [{
+      characters: path_to_disneyland,
+      data: {test_part: 'choose_disneyland'}
+    },
+  ];
+
+
+  /* test my image button plugin */
+  var disney_trial = {
+    type: "chung-clickable-image",
+    choices: jsPsych.timelineVariable('characters'),
+    stimulus: "Pick a character.",
+  };
+
+  var disney_feedback = {
+    type: 'html-keyboard-response',
+    stimulus: function(){
+      var selected = jsPsych.data.getLastTrialData().select('button_pressed')["values"];
+      var character = path_to_disneyland[Number(selected)].replace("img/", "").replace(".jpg", "");
+      if (character == "Darth_Vader") {
+        return "No! I am your father!";
+      } else {
+        return "You chose " + character + "!!";
+      }
+    },
+
+    choices: jsPsych.NO_KEYS,
+    trial_duration: 1000,
+    data: {test_part: 'feedback'}
+  }
+
+  var tap_disney = {
+    timeline: [disney_trial, disney_feedback],
+    timeline_variables: disney_stimuli,
+    repetitions: 1
+  };
+  timeline.push(tap_disney);
 
   /* define instructions trial */
   var instructions = {
@@ -90,7 +127,7 @@
 
     post_trial_gap: 2000
   };
-  timeline.push(instructions);
+  // timeline.push(instructions);
 
   /* test trials */
   var test_stimuli = [{
@@ -138,7 +175,7 @@
     repetitions: 0
   }
 
-  timeline.push(test_procedure);
+  // timeline.push(test_procedure);
 
   var debrief_block = {
     type: "html-keyboard-response",
@@ -160,7 +197,7 @@
     }
   };
 
-  timeline.push(debrief_block);
+  // timeline.push(debrief_block);
 
 
   /* start the experiment */
